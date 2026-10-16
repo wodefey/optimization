@@ -15,6 +15,17 @@ Base.@kwdef mutable struct Model
     objective_value::Float64 = 0.0
 end
 
+function Base.show(io::IO, ::MIME"text/plain", m::Model)
+    printstyled(io, "Model:\n", color=:blue, bold=true)
+    for field in fieldnames(Model)
+        val = getfield(m, field)
+        
+        print(io, "  ")
+        printstyled(io, lpad(string(field), 18), color=:yellow, bold=true)
+        println(io, " : ", val)
+    end
+end
+
 function simplex(model::Model; verbose=true)
     A_b = model.A[:, model.basic_vars]
     x_b = A_b \ model.b
@@ -97,7 +108,6 @@ function simplex(model::Model; verbose=true)
 
         # Determine the new solution after taking the step along the best path
         x1 = model.solution + step * optimum_path
-        println("New solution: ", x1)
 
         # Update the basic and non-basic variables after the pivot
         model.basic_vars[lbv_idx] = lnbv

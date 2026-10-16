@@ -3,7 +3,7 @@ using LinearAlgebra
 @enum OptimizationGoal MINIMIZE MAXIMIZE
 @enum TerminationStatus PENDING OPTIMAL UNBOUNDED INFEASIBLE
 
-Base.@kwdef mutable struct Model
+Base.@kwdef mutable struct SimplexModel
     goal::OptimizationGoal = MINIMIZE
     c::Vector{Float64} = Float64[]
     A::Matrix{Float64} = Matrix{Float64}(undef, 0, 0)
@@ -15,9 +15,9 @@ Base.@kwdef mutable struct Model
     objective_value::Float64 = 0.0
 end
 
-function Base.show(io::IO, ::MIME"text/plain", m::Model)
+function Base.show(io::IO, ::MIME"text/plain", m::SimplexModel)
     printstyled(io, "Model:\n", color=:blue, bold=true)
-    for field in fieldnames(Model)
+    for field in fieldnames(SimplexModel)
         val = getfield(m, field)
         
         print(io, "  ")
@@ -26,7 +26,7 @@ function Base.show(io::IO, ::MIME"text/plain", m::Model)
     end
 end
 
-function simplex(model::Model; verbose=true)
+function simplex(model::SimplexModel; verbose=true)
     A_b = model.A[:, model.basic_vars]
     x_b = A_b \ model.b
 
@@ -95,7 +95,7 @@ function simplex(model::Model; verbose=true)
 
         if isempty(ratios)
             solving = false
-            termination_status = UNBOUNDED
+            model.termination_status = UNBOUNDED
             break
         end
         step, lbv_idx = findmin(ratios)

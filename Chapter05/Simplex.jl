@@ -10,6 +10,7 @@ Base.@kwdef mutable struct SimplexModel
     b::Vector{Float64} = Float64[]
     basic_vars::Vector{Int} = Int[]
     non_basic_vars::Vector{Int} = Int[]
+    iteration::Int = 0
     termination_status::TerminationStatus = PENDING
     solution::Vector{Float64} = Float64[]
     objective_value::Float64 = 0.0
@@ -46,9 +47,9 @@ function simplex(model::SimplexModel; verbose=true, max_iterations=100)
     end
 
     solving = true
-    iteration = 0
+    model.iteration = 0
     model.termination_status = SOLVING
-    while solving && iteration < max_iterations
+    while solving && model.iteration < max_iterations
         # lnbv = leaving nonbasic variable
         lnbv = 0
         lnbv_idx = 0
@@ -81,10 +82,10 @@ function simplex(model::SimplexModel; verbose=true, max_iterations=100)
             break   
         end
 
-        iteration += 1
+        model.iteration += 1
 
         if verbose
-            println("Iteration: ", iteration)
+            println("Iteration: ", model.iteration)
 
             println("Leaving nonbasic variable: ", lnbv)
             println("Optimum path: ", optimum_path)
@@ -131,7 +132,7 @@ function simplex(model::SimplexModel; verbose=true, max_iterations=100)
         end
     end
 
-    if iteration == max_iterations
+    if model.iteration == max_iterations
         model.termination_status = MAX_ITERATIONS_REACHED
         printstyled("Maximum number of iterations reached.", color=:red)
         println()

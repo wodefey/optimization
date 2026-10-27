@@ -1,7 +1,7 @@
 using LinearAlgebra
 
 @enum OptimizationGoal MINIMIZE MAXIMIZE
-@enum TerminationStatus PENDING OPTIMAL UNBOUNDED INFEASIBLE
+@enum TerminationStatus PENDING SOLVING OPTIMAL UNBOUNDED INFEASIBLE MAX_ITERATIONS_REACHED
 
 Base.@kwdef mutable struct SimplexModel
     goal::OptimizationGoal = MINIMIZE
@@ -26,12 +26,17 @@ function Base.show(io::IO, ::MIME"text/plain", m::SimplexModel)
     end
 end
 
-function simplex(model::SimplexModel; verbose=true)
+function simplex(model::SimplexModel; verbose=true, max_iterations=100)
     A_b = model.A[:, model.basic_vars]
     x_b = A_b \ model.b
 
     model.solution = zeros(length(model.c))
     model.solution[model.basic_vars] = x_b
+
+    if any(x -> x < 0.0, model.solution)
+        model.termination_status = INFEASIBLE
+        return
+    end
 
     if verbose
         println("Initial solution x: ", model.solution)
@@ -42,12 +47,13 @@ function simplex(model::SimplexModel; verbose=true)
 
     solving = true
     iteration = 0
-    termination_status = PENDING
-    while solving
+    model.termination_status = SOLVING
+    while solving && iteration < max_iterations
         # lnbv = leaving nonbasic variable
         lnbv = 0
         lnbv_idx = 0
-        optimum_improvement = model.goal == MINIMIZE ? 1 : -1
+        # optimum_improvement = model.goal == MINIMIZE ? 1 : -1
+        optimum_improvement = 0.0
         optimum_path = []
 
         for (nbv_idx, nbv) ∈ enumerate(model.non_basic_vars)
@@ -115,12 +121,19 @@ function simplex(model::SimplexModel; verbose=true)
         model.non_basic_vars[lnbv_idx] = lbv
         sort!(model.non_basic_vars)
         model.solution = x1
+        model.objective_value = round(model.c ⋅ model.solution, digits=2)
         if verbose
             println("Updated solution x: ", model.solution)
             println("Updated basic variables: ", model.basic_vars)
             println("Updated non-basic variables: ", model.non_basic_vars)
-            println("Updated objective value c * x: ", model.c ⋅ model.solution)
+            println("Updated objective value c * x: ", model.objective_value)
             println()
         end
+    end
+
+    if iteration == max_iterations
+        model.termination_status = MAX_ITERATIONS_REACHED
+        printstyled("Maximum number of iterations reached.", color=:red)
+        println()
     end
 end

@@ -36,6 +36,9 @@ function simplex(model::SimplexModel; verbose=true, max_iterations=100)
 
     if any(x -> x < 0.0, model.solution)
         model.termination_status = INFEASIBLE
+        if verbose
+            println("Initial solution is infeasible: ", model.solution)
+        end
         return
     end
 

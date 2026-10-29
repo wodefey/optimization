@@ -60,10 +60,11 @@ function simplex(model::SimplexModel; verbose=true, max_iterations=100)
         optimum_improvement = 0.0
         optimum_path = []
 
+        F = lu(model.A[:, model.basic_vars])
         for (nbv_idx, nbv) ∈ enumerate(model.non_basic_vars)
             path = zeros(length(model.c))
             path[nbv] = 1
-            path[model.basic_vars] = model.A[:, model.basic_vars] \ (-model.A[:, nbv])
+            path[model.basic_vars] = F \ (-model.A[:, nbv])
             path_improvement = model.c ⋅ path
             if verbose
                 println("Path: ", path)

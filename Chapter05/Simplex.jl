@@ -16,6 +16,13 @@ Base.@kwdef mutable struct SimplexModel
     objective_value::Float64 = 0.0
 end
 
+function restart!(model::SimplexModel)
+    model.iteration = 0
+    model.termination_status = PENDING
+    model.solution = zeros(length(model.c))
+    model.objective_value = 0.0
+end
+
 function Base.show(io::IO, ::MIME"text/plain", m::SimplexModel)
     printstyled(io, "Model:\n", color=:blue, bold=true)
     for field in fieldnames(SimplexModel)

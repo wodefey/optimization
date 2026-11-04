@@ -15,6 +15,11 @@ Base.@kwdef mutable struct SimplexModel
     solution::Vector{Float64} = Float64[]
     objective_value::Float64 = 0.0
 end
+@enum ConstraintSense EQ LE GEBase.@kwdef mutable struct Constraint
+    lhs::Vector{Float64} = Float64[]
+    sense::ConstraintSense = EQ
+    rhs::Float64 = 0.0
+end
 
 function restart!(model::SimplexModel)
     model.iteration = 0

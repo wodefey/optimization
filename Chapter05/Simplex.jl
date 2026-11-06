@@ -2,6 +2,22 @@ using LinearAlgebra
 
 @enum OptimizationGoal MINIMIZE MAXIMIZE
 @enum TerminationStatus PENDING SOLVING OPTIMAL UNBOUNDED INFEASIBLE MAX_ITERATIONS_REACHED
+@enum ConstraintSense EQ LE GE
+Base.@kwdef mutable struct Constraint
+    lhs::Vector{Float64} = Float64[]
+    sense::ConstraintSense = EQ
+    rhs::Float64 = 0.0
+end
+
+Base.@kwdef mutable struct LinearModel
+    goal::OptimizationGoal = MINIMIZE
+    objective::Vector{Float64} = Float64[]
+    constraints::Vector{Constraint} = Constraint[]
+end
+
+add_goal!(model::LinearModel, goal::OptimizationGoal) = (model.goal = goal)
+add_objective!(model::LinearModel, objective::Vector{Float64}) = (model.objective = objective)
+add_constraint!(model::LinearModel, constraint::Constraint) = push!(model.constraints, constraint)
 
 Base.@kwdef mutable struct SimplexModel
     goal::OptimizationGoal = MINIMIZE
@@ -15,10 +31,46 @@ Base.@kwdef mutable struct SimplexModel
     solution::Vector{Float64} = Float64[]
     objective_value::Float64 = 0.0
 end
-@enum ConstraintSense EQ LE GEBase.@kwdef mutable struct Constraint
-    lhs::Vector{Float64} = Float64[]
-    sense::ConstraintSense = EQ
-    rhs::Float64 = 0.0
+
+# In this version, we assume:
+#   the objective and constraints are zero filled where variables are missing
+#   variables are aligned in the same order across the objective and constraints
+function build_simplex_model(lm::LinearModel)
+    sm = SimplexModel()
+    sm.goal = lm.goal
+    sm.c = lm.objective
+
+    m, n = length(lm.constraints), length(lm.objective)
+    sm.A = zeros(m, n)
+    sm.b = zeros(m)
+
+    println("Building simplex model",sm)
+    for (i, con) in enumerate(lm.constraints)
+        println("A", sm.A)
+        sm.A[i, :] = con.lhs
+        sm.b[i] = con.rhs
+     end
+
+    for (i, con) in enumerate(lm.constraints)
+         if con.sense == LE
+            col = zeros(m,1)
+            col[i] = 1
+            sm.A = hcat(sm.A,col)
+            sm.c = vcat(sm.c, 0.0)
+            n += 1
+        elseif con.sense == GE
+            col = zeros(m,1)
+            col[i] = -1
+            sm.A = hcat(sm.A,col)
+            sm.c = vcat(sm.c, 0.0)
+            n += 1
+        end
+    end
+
+    sm.basic_vars = collect(1:m)
+    sm.non_basic_vars = collect(m+1:n)
+
+    return sm
 end
 
 function restart!(model::SimplexModel)

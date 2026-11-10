@@ -26,6 +26,7 @@ Base.@kwdef mutable struct SimplexModel
     b::Vector{Float64} = Float64[]
     basic_vars::Vector{Int} = Int[]
     non_basic_vars::Vector{Int} = Int[]
+    two_phase::Bool = false
     iteration::Int = 0
     termination_status::TerminationStatus = PENDING
     solution::Vector{Float64} = Float64[]
@@ -35,7 +36,7 @@ end
 # In this version, we assume:
 #   the objective and constraints are zero filled where variables are missing
 #   variables are aligned in the same order across the objective and constraints
-function build_simplex_model(lm::LinearModel)
+function build_simplex_model(lm::LinearModel; basic_vars=Int[])
     sm = SimplexModel()
     sm.goal = lm.goal
     sm.c = lm.objective
@@ -44,12 +45,14 @@ function build_simplex_model(lm::LinearModel)
     sm.A = zeros(m, n)
     sm.b = zeros(m)
 
-    println("Building simplex model",sm)
-    for (i, con) in enumerate(lm.constraints)
+     for (i, con) in enumerate(lm.constraints)
         println("A", sm.A)
         sm.A[i, :] = con.lhs
         sm.b[i] = con.rhs
      end
+
+    sm.two_phase = false
+    sm.basic_vars = basic_vars
 
     for (i, con) in enumerate(lm.constraints)
          if con.sense == LE
@@ -58,7 +61,9 @@ function build_simplex_model(lm::LinearModel)
             sm.A = hcat(sm.A,col)
             sm.c = vcat(sm.c, 0.0)
             n += 1
+            push!(sm.basic_vars, n)
         elseif con.sense == GE
+            sm.two_phase = true
             col = zeros(m,1)
             col[i] = -1
             sm.A = hcat(sm.A,col)
@@ -67,11 +72,26 @@ function build_simplex_model(lm::LinearModel)
         end
     end
 
-    sm.basic_vars = collect(1:m)
-    sm.non_basic_vars = collect(m+1:n)
+    if sm.two_phase
+        sm.goal = MINIMIZE
+        sm.c = zeros(length(sm.c))
+        for (i, con) in enumerate(lm.constraints)
+            if con.sense == GE
+                col = zeros(m,1)
+                col[i] = 1
+                sm.A = hcat(sm.A,col)
+                sm.c = vcat(sm.c, 1.0)
+                n += 1
+                push!(sm.basic_vars, n)
+            end
+        end
+    end
 
-    return sm
+    sm.non_basic_vars = setdiff(1:n, sm.basic_vars)
+
+     return sm
 end
+
 
 function restart!(model::SimplexModel)
     model.iteration = 0

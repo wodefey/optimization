@@ -5,6 +5,7 @@ add_constraint!(model::LinearModel, constraint::Constraint) = push!(model.constr
 # In this version, we assume:
 #   the objective and constraints are zero filled where variables are missing
 #   variables are aligned in the same order across the objective and constraints
+#   con.sense == EQ NOT CONSIDERED IN SLACK/ARTIFICIAL VARIABLE ADDITION
 function build_simplex_model(lm::LinearModel; basic_vars=Int[])
     sm = SimplexModel()
     sm.goal = lm.goal
@@ -15,13 +16,12 @@ function build_simplex_model(lm::LinearModel; basic_vars=Int[])
     sm.b = zeros(m)
 
      for (i, con) in enumerate(lm.constraints)
-        println("A", sm.A)
         sm.A[i, :] = con.lhs
         sm.b[i] = con.rhs
      end
 
     sm.two_phase = false
-    sm.basic_vars = basic_vars
+    sm.basic_vars = []
 
     for (i, con) in enumerate(lm.constraints)
          if con.sense == LE
@@ -41,24 +41,29 @@ function build_simplex_model(lm::LinearModel; basic_vars=Int[])
         end
     end
 
-    if sm.two_phase
-        sm.goal = MINIMIZE
-        sm.c = zeros(length(sm.c))
-        for (i, con) in enumerate(lm.constraints)
-            if con.sense == GE
-                col = zeros(m,1)
-                col[i] = 1
-                sm.A = hcat(sm.A,col)
-                sm.c = vcat(sm.c, 1.0)
-                n += 1
-                push!(sm.basic_vars, n)
+    if isempty(basic_vars)
+        if sm.two_phase
+            sm.goal = MINIMIZE
+            sm.c = zeros(length(sm.c))
+            for (i, con) in enumerate(lm.constraints)
+                if con.sense == GE
+                    col = zeros(m,1)
+                    col[i] = 1
+                    sm.A = hcat(sm.A,col)
+                    sm.c = vcat(sm.c, 1.0)
+                    n += 1
+                    push!(sm.basic_vars, n)
+                end
             end
         end
+    else
+        sm.basic_vars = basic_vars
+        sm.two_phase = false
     end
 
     sm.non_basic_vars = setdiff(1:n, sm.basic_vars)
 
-     return sm
+    return sm
 end
 
 function restart!(model::SimplexModel)

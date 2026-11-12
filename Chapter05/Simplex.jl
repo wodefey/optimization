@@ -3,6 +3,14 @@ include("types.jl")
 include("utils.jl")
 
 function optimize(lm::LinearModel; verbose=false, max_iterations=100)
+    if isempty(lm.constraints)
+        error("No constraints specified in the linear model.")
+    end
+
+    if isempty(lm.objective)
+        error("No objective specified in the linear model.")
+    end
+    
     sm = build_simplex_model(lm)
     simplex!(sm; verbose=verbose, max_iterations=max_iterations)
 

@@ -2,6 +2,16 @@ add_goal!(model::LinearModel, goal::OptimizationGoal) = (model.goal = goal)
 add_objective!(model::LinearModel, objective::Vector{Float64}) = (model.objective = objective)
 add_constraint!(model::LinearModel, constraint::Constraint) = push!(model.constraints, constraint)
 
+function verify(lm::LinearModel)
+    if isempty(lm.constraints)
+        error("No constraints specified in the linear model.")
+    end
+
+    if isempty(lm.objective)
+        error("No objective specified in the linear model.")
+    end
+end
+
 # In this version, we assume:
 #   the objective and constraints are zero filled where variables are missing
 #   variables are aligned in the same order across the objective and constraints

@@ -2,14 +2,19 @@ using LinearAlgebra
 include("types.jl")
 include("utils.jl")
 
-function optimize(lm::LinearModel)
+function optimize(lm::LinearModel; verbose=false, max_iterations=100)
     sm = build_simplex_model(lm)
-    simplex!(sm)
+    simplex!(sm; verbose=verbose, max_iterations=max_iterations)
+
+    if sm.two_phase
+        sm = build_simplex_model(lm, basic_vars=sm.basic_vars)
+        simplex!(sm; verbose=verbose, max_iterations=max_iterations)
+    end
 
     return sm
 end
 
-function simplex!(model::SimplexModel; verbose=true, max_iterations=100)
+function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
     A_b = model.A[:, model.basic_vars]
     x_b = A_b \ model.b
 

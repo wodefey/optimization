@@ -73,6 +73,8 @@ function build_simplex_model(lm::LinearModel; basic_vars=Int[])
                 println("col_sign: ", col_sign)
                if b_sign != col_sign
                     add_artificial = true
+               else
+                    push!(sm.basic_vars, col)
                 end
             end
             if add_artificial
@@ -82,6 +84,7 @@ function build_simplex_model(lm::LinearModel; basic_vars=Int[])
                 sm.c = vcat(sm.c, 1.0)
                 n += 1
                 push!(sm.artificial_vars, n)
+                push!(sm.basic_vars, n)
             end
         end
         if !isempty(sm.artificial_vars)

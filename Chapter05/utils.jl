@@ -3,6 +3,7 @@ add_objective!(model::LinearModel, objective::Vector{Float64}) = (model.objectiv
 add_constraint!(model::LinearModel, constraint::Constraint) = push!(model.constraints, constraint)
 
 function verify(lm::LinearModel)
+
     if isempty(lm.constraints)
         error("No constraints specified in the linear model.")
     end
@@ -25,48 +26,72 @@ function build_simplex_model(lm::LinearModel; basic_vars=Int[])
     sm.A = zeros(m, n)
     sm.b = zeros(m)
 
-     for (i, con) in enumerate(lm.constraints)
-        sm.A[i, :] = con.lhs
-        sm.b[i] = con.rhs
+     for (k, con) in enumerate(lm.constraints)
+        sm.A[k, :] = con.lhs
+        sm.b[k] = con.rhs
      end
 
     sm.two_phase = false
     sm.basic_vars = []
-
-    for (i, con) in enumerate(lm.constraints)
+    sm.slack_vars = []
+    sm.artificial_vars = []
+     # add slack variables
+    for (k, con) in enumerate(lm.constraints)
          if con.sense == LE
-            col = zeros(m,1)
-            col[i] = 1
+            col = zeros(Float64, m, 1)
+            col[k] = 1.0
             sm.A = hcat(sm.A,col)
             sm.c = vcat(sm.c, 0.0)
             n += 1
-            push!(sm.basic_vars, n)
+            push!(sm.slack_vars, n)
         elseif con.sense == GE
-            sm.two_phase = true
-            col = zeros(m,1)
-            col[i] = -1
+            # sm.two_phase = true
+            col = zeros(Float64, m, 1)
+            col[k] = -1.0
             sm.A = hcat(sm.A,col)
             sm.c = vcat(sm.c, 0.0)
             n += 1
+            push!(sm.slack_vars, n)
         end
     end
 
     if isempty(basic_vars)
-        if sm.two_phase
-            sm.goal = MINIMIZE
-            sm.c = zeros(length(sm.c))
-            for (i, con) in enumerate(lm.constraints)
-                if con.sense == GE
-                    col = zeros(m,1)
-                    col[i] = 1
-                    sm.A = hcat(sm.A,col)
-                    sm.c = vcat(sm.c, 1.0)
-                    n += 1
-                    push!(sm.basic_vars, n)
+        # add artificial variables
+        for (k, con) in enumerate(lm.constraints)
+            add_artificial = false
+            row = sm.A[k,:]
+            slack_var = filter(x -> row[x] != 0.0, sm.slack_vars)
+            println("slack_var: ", slack_var)
+            if isempty(slack_var)
+                # equality constraint
+                add_artificial = true
+            else
+                b_sign = sign(sm.b[k])
+                println("b_sign: ", b_sign)
+                col = slack_var[1]
+                col_sign = sign(sm.A[k, col])
+                println("col_sign: ", col_sign)
+               if b_sign != col_sign
+                    add_artificial = true
                 end
             end
+            if add_artificial
+                col = zeros(Float64, m, 1)
+                col[k] = 1.0
+                sm.A = hcat(sm.A,col)
+                sm.c = vcat(sm.c, 1.0)
+                n += 1
+                push!(sm.artificial_vars, n)
+            end
         end
-    else
+        if !isempty(sm.artificial_vars)
+            sm.two_phase = true
+            sm.goal = MINIMIZE
+            sm.c = zeros(length(sm.c))
+            sm.c[sm.artificial_vars] .= 1.0
+        end
+
+     else
         sm.basic_vars = basic_vars
         sm.two_phase = false
     end

@@ -20,6 +20,8 @@ Base.@kwdef mutable struct SimplexModel
     b::Vector{Float64} = Float64[]
     basic_vars::Vector{Int} = Int[]
     non_basic_vars::Vector{Int} = Int[]
+    slack_vars::Vector{Int} = Int[]
+    artificial_vars::Vector{Int} = Int[]
     two_phase::Bool = false
     iteration::Int = 0
     termination_status::TerminationStatus = PENDING

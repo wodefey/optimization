@@ -70,9 +70,19 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
 
         if lnbv == 0
             solving = false
-            model.termination_status = OPTIMAL
             model.objective_value = round(model.c ⋅ model.solution, digits=2)
-            break   
+            if model.two_phase && model.objective_value != 0.0
+                model.termination_status = INFEASIBLE
+                if verbose
+                    printstyled("Phase 1 solution is infeasible.", color=:red)
+                end
+            else
+                model.termination_status = OPTIMAL
+                if verbose
+                    printstyled("Optimal solution found.", color=:green)
+                end
+            end
+            break
         end
 
         model.iteration += 1

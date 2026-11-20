@@ -61,17 +61,14 @@ function build_simplex_model(lm::LinearModel; basic_vars=Int[])
             add_artificial = false
             row = sm.A[k,:]
             slack_var = filter(x -> row[x] != 0.0, sm.slack_vars)
-            println("slack_var: ", slack_var)
-            if isempty(slack_var)
+             if isempty(slack_var)
                 # equality constraint
                 add_artificial = true
             else
                 b_sign = sign(sm.b[k])
-                println("b_sign: ", b_sign)
                 col = slack_var[1]
                 col_sign = sign(sm.A[k, col])
-                println("col_sign: ", col_sign)
-               if b_sign != col_sign
+                if b_sign != col_sign
                     add_artificial = true
                else
                     push!(sm.basic_vars, col)

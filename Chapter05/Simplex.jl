@@ -8,7 +8,7 @@ function optimize(lm::LinearModel; verbose=false, max_iterations=100)
     sm = build_simplex_model(lm)
     simplex!(sm; verbose=verbose, max_iterations=max_iterations)
 
-    if sm.two_phase
+    if sm.two_phase && (sm.termination_status == OPTIMAL)
         sm = build_simplex_model(lm, basic_vars=sm.basic_vars)
         simplex!(sm; verbose=verbose, max_iterations=max_iterations)
     end
@@ -32,10 +32,12 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
     end
 
     if verbose
-        println("Initial solution x: ", model.solution)
-        println("Initial basic variables: ", model.basic_vars)
-        println("Initial non-basic variables: ", model.non_basic_vars)
-        println("Initial objective value c * x: ", model.c ⋅ model.solution)
+        printstyled("Starting simplex method\n", color=:blue)
+        println("\tInitial solution x: ", model.solution)
+        println("\tInitial basic variables: ", model.basic_vars)
+        println("\tInitial non-basic variables: ", model.non_basic_vars)
+        println("\tInitial objective value c * x: ", model.c ⋅ model.solution)
+        println()
     end
 
     solving = true
@@ -49,6 +51,9 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
         optimum_improvement = 0.0
         optimum_path = []
 
+        if verbose
+            printstyled("Determine entering basic variable\n", color=:blue)
+        end
         F = lu(model.A[:, model.basic_vars])
         for (nbv_idx, nbv) ∈ enumerate(model.non_basic_vars)
             path = zeros(length(model.c))
@@ -56,8 +61,10 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
             path[model.basic_vars] = F \ (-model.A[:, nbv])
             path_improvement = model.c ⋅ path
             if verbose
-                println("Path: ", path)
-                println("Improvement: ", path_improvement)
+                printstyled("Evaluating non-basic variable: ", color=:yellow)
+                println(nbv)
+                println("\tPath: ", path)
+                println("\tImprovement: ", path_improvement)
             end
             if (model.goal == MAXIMIZE && path_improvement > optimum_improvement) ||
                (model.goal == MINIMIZE && path_improvement < optimum_improvement)
@@ -71,7 +78,7 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
         if lnbv == 0
             solving = false
             model.objective_value = round(model.c ⋅ model.solution, digits=2)
-            if model.two_phase && model.objective_value != 0.0
+            if model.two_phase && (abs(model.objective_value) > 0.0001)
                 model.termination_status = INFEASIBLE
                 if verbose
                     printstyled("Phase 1 solution is infeasible.", color=:red)

@@ -32,7 +32,7 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
     end
 
     if verbose
-        printstyled("Starting simplex method\n", color=:blue)
+        printstyled("Starting simplex method\n", color=:blue, underline=true)
         println("\tInitial solution x: ", model.solution)
         println("\tInitial basic variables: ", model.basic_vars)
         println("\tInitial non-basic variables: ", model.non_basic_vars)
@@ -47,13 +47,17 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
         # lnbv = leaving nonbasic variable
         lnbv = 0
         lnbv_idx = 0
-        # optimum_improvement = model.goal == MINIMIZE ? 1 : -1
         optimum_improvement = 0.0
         optimum_path = []
 
+        model.iteration += 1
         if verbose
-            printstyled("Determine entering basic variable\n", color=:blue)
+            println()
+            printstyled("Iteration: ", color=:cyan)
+            println(model.iteration)
+            printstyled("Determine entering basic variable\n", color=:cyan)
         end
+
         F = lu(model.A[:, model.basic_vars])
         for (nbv_idx, nbv) ∈ enumerate(model.non_basic_vars)
             path = zeros(length(model.c))
@@ -81,7 +85,8 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
             if model.two_phase && (abs(model.objective_value) > 0.0001)
                 model.termination_status = INFEASIBLE
                 if verbose
-                    printstyled("Phase 1 solution is infeasible.", color=:red)
+                    println()
+                    printstyled("Phase 1 solution is infeasible.", color=:red, italic=true)
                 end
             else
                 model.termination_status = OPTIMAL
@@ -89,17 +94,14 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
                     printstyled("Optimal solution found.", color=:green)
                 end
             end
-            break
+            return
         end
 
-        model.iteration += 1
-
         if verbose
-            println("Iteration: ", model.iteration)
-
-            println("Leaving nonbasic variable: ", lnbv)
-            println("Optimum path: ", optimum_path)
-            println("Optimum improvement: ", optimum_improvement)
+            printstyled("Entering basic variable: ", color=:yellow)
+            println(lnbv)
+            println("\tOptimum path: ", optimum_path)
+            println("\tOptimum improvement: ", optimum_improvement)
         end
 
         # Determine largest step along the best path
@@ -118,9 +120,10 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
         step, lbv_idx = findmin(ratios)
         lbv = model.basic_vars[lbv_idx]
         if verbose
-            println("Ratios: ", ratios)
-            println("Step: ", step)
-            println("Leaving basic variable: ", lbv)
+            println("\tRatios: ", ratios)
+            println("\tStep: ", step)
+            printstyled("Leaving basic variable: ", color=:yellow)
+            println(lbv)
         end
 
         # Determine the new solution after taking the step along the best path
@@ -134,10 +137,10 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
         model.solution = x1
         model.objective_value = round(model.c ⋅ model.solution, digits=2)
         if verbose
-            println("Updated solution x: ", model.solution)
-            println("Updated basic variables: ", model.basic_vars)
-            println("Updated non-basic variables: ", model.non_basic_vars)
-            println("Updated objective value c * x: ", model.objective_value)
+            println("\tUpdated solution x: ", model.solution)
+            println("\tUpdated basic variables: ", model.basic_vars)
+            println("\tUpdated non-basic variables: ", model.non_basic_vars)
+            println("\tUpdated objective value c * x: ", model.objective_value)
             println()
         end
     end

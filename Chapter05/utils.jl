@@ -2,14 +2,20 @@ add_goal!(model::LinearModel, goal::OptimizationGoal) = (model.goal = goal)
 add_objective!(model::LinearModel, objective::Vector{Float64}) = (model.objective = objective)
 add_constraint!(model::LinearModel, constraint::Constraint) = push!(model.constraints, constraint)
 
+struct LinearModelError <: Exception
+    msg::String
+end
+
+Base.showerror(io::IO, e::LinearModelError) = printstyled(io, "LinearModelError: $(e.msg)\n", color=:red)
+
 function verify(lm::LinearModel)
 
     if isempty(lm.constraints)
-        error("No constraints specified in the linear model.")
+        throw(LinearModelError("No constraints specified in the linear model."))
     end
 
     if isempty(lm.objective)
-        error("No objective specified in the linear model.")
+        throw(LinearModelError("No objective specified in the linear model."))
     end
 end
 

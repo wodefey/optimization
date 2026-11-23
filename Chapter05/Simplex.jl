@@ -120,6 +120,7 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
         step, lbv_idx = findmin(ratios)
         lbv = model.basic_vars[lbv_idx]
         if verbose
+            printstyled("\tkey in ratios dictionary is index in basic variables array\n", color=:light_green)
             println("\tRatios: ", ratios)
             println("\tStep: ", step)
             printstyled("Leaving basic variable: ", color=:yellow)

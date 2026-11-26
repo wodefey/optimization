@@ -47,7 +47,7 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
         # lnbv = leaving nonbasic variable
         lnbv = 0
         lnbv_idx = 0
-        optimum_improvement = 0.0
+        optimum_reduced_cost = 0.0
         optimum_path = []
 
         model.iteration += 1
@@ -63,16 +63,16 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
             path = zeros(length(model.c))
             path[nbv] = 1
             path[model.basic_vars] = F \ (-model.A[:, nbv])
-            path_improvement = model.c ⋅ path
+            reduced_cost = model.c ⋅ path
             if verbose
                 printstyled("Evaluating non-basic variable: ", color=:yellow)
                 println(nbv)
                 println("\tPath: ", path)
-                println("\tImprovement: ", path_improvement)
+                println("\tImprovement: ", reduced_cost)
             end
-            if (model.goal == MAXIMIZE && path_improvement > optimum_improvement) ||
-               (model.goal == MINIMIZE && path_improvement < optimum_improvement)
-                optimum_improvement = path_improvement
+            if (model.goal == MAXIMIZE && reduced_cost > optimum_reduced_cost) ||
+               (model.goal == MINIMIZE && reduced_cost < optimum_reduced_cost)
+                optimum_reduced_cost = reduced_cost
                 lnbv = nbv
                 lnbv_idx = nbv_idx
                 optimum_path = path
@@ -101,7 +101,7 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
             printstyled("Entering basic variable: ", color=:yellow)
             println(lnbv)
             println("\tOptimum path: ", optimum_path)
-            println("\tOptimum improvement: ", optimum_improvement)
+            println("\tOptimum improvement: ", optimum_reduced_cost)
         end
 
         # Determine largest step along the best path

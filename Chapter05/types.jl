@@ -26,5 +26,6 @@ Base.@kwdef mutable struct SimplexModel
     iteration::Int = 0
     termination_status::TerminationStatus = PENDING
     solution::Vector{Float64} = Float64[]
+    progress::Vector{Float64} = Float64[]
     objective_value::Float64 = 0.0
 end

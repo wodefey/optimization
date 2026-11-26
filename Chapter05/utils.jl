@@ -111,6 +111,7 @@ function restart!(model::SimplexModel)
     model.iteration = 0
     model.termination_status = PENDING
     model.solution = zeros(length(model.c))
+    model.progress = Float64[]
     model.objective_value = 0.0
 end
 

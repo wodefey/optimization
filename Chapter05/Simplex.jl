@@ -137,6 +137,7 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
         sort!(model.non_basic_vars)
         model.solution = x1
         model.objective_value = round(model.c ⋅ model.solution, digits=2)
+        push!(model.progress, model.objective_value)
         if verbose
             println("\tUpdated solution x: ", model.solution)
             println("\tUpdated basic variables: ", model.basic_vars)

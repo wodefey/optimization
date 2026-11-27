@@ -44,9 +44,9 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
     model.iteration = 0
     model.termination_status = SOLVING
     while solving && model.iteration < max_iterations
-        # lnbv = leaving nonbasic variable
-        lnbv = 0
-        lnbv_idx = 0
+        # ebv = leaving nonbasic variable
+        ebv = 0
+        ebv_idx = 0
         optimum_reduced_cost = 0.0
         optimum_path = []
 
@@ -68,18 +68,18 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
                 printstyled("Evaluating non-basic variable: ", color=:yellow)
                 println(nbv)
                 println("\tPath: ", path)
-                println("\tImprovement: ", reduced_cost)
+                println("\tReduced cost: ", reduced_cost)
             end
             if (model.goal == MAXIMIZE && reduced_cost > optimum_reduced_cost) ||
                (model.goal == MINIMIZE && reduced_cost < optimum_reduced_cost)
                 optimum_reduced_cost = reduced_cost
-                lnbv = nbv
-                lnbv_idx = nbv_idx
+                ebv = nbv
+                ebv_idx = nbv_idx
                 optimum_path = path
             end
         end
 
-        if lnbv == 0
+        if ebv == 0
             solving = false
             model.objective_value = round(model.c ⋅ model.solution, digits=2)
             if model.two_phase && (abs(model.objective_value) > 0.0001)
@@ -99,9 +99,9 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
 
         if verbose
             printstyled("Entering basic variable: ", color=:yellow)
-            println(lnbv)
+            println(ebv)
             println("\tOptimum path: ", optimum_path)
-            println("\tOptimum improvement: ", optimum_reduced_cost)
+            println("\tOptimum reduced cost: ", optimum_reduced_cost)
         end
 
         # Determine largest step along the best path
@@ -131,9 +131,9 @@ function simplex!(model::SimplexModel; verbose=false, max_iterations=100)
         x1 = model.solution + step * optimum_path
 
         # Update the basic and non-basic variables after the pivot
-        model.basic_vars[lbv_idx] = lnbv
+        model.basic_vars[lbv_idx] = ebv
         sort!(model.basic_vars)
-        model.non_basic_vars[lnbv_idx] = lbv
+        model.non_basic_vars[ebv_idx] = lbv
         sort!(model.non_basic_vars)
         model.solution = x1
         model.objective_value = round(model.c ⋅ model.solution, digits=2)
